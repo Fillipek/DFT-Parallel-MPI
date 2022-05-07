@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 DATA_DIR = "../data/"
-FILENAME = "fft_data.csv"
+FILENAME = "rev_fft_data.csv"
 
 file = open(DATA_DIR + FILENAME, "r")
 X, Y_re, Y_im = [], [], []

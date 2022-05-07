@@ -43,21 +43,23 @@ void fft_radix2(complex_double *in, complex_double *out, size_t N, size_t s)
 // Implementacja z: https://www.geeksforgeeks.org/write-an-efficient-c-program-to-reverse-bits-of-a-number/: 
 static int rev(unsigned int num, size_t N)
 {
-    unsigned int NO_OF_BITS = log2(N);
-    unsigned int reverse_num = 0;
-    int i;
-    for (i = 0; i < NO_OF_BITS; i++) {
-        if ((num & (1 << i)))
-            reverse_num |= 1 << ((NO_OF_BITS - 1) - i);
-    }
-    return reverse_num;
-}
+    int Nbits = (int)log2(N);
 
+    int x_rev = 0;
+    for (int i=0; i<Nbits; i++)
+    {
+        int curr_bit = (num >> i) & 1;
+        x_rev += (curr_bit << (Nbits - 1 - i)); 
+    }
+        
+    return x_rev;
+}
 
 static void bit_reversal_copy(complex_double* result, complex_double* input, size_t N)
 {
-    for(unsigned int k = 0; k < N - 1; k++)
+    for(unsigned int k = 0; k < N; k++)
     {
+        printf("%d %d\n", k, rev(k, N));
         result[rev(k, N)] = input[k];
     }
 }
@@ -69,10 +71,10 @@ void fft_radix2_iter(complex_double *in, complex_double *out, size_t N, size_t s
 
     for(int s = 1; s <= log2(N); s++)
     {
-        int m = pow(2, s);
-        complex_double omega_m = { .re = cos(2 * 3.141592 / m), .im = sin(-2 * 3.141592 / m) };
+        int m = 1 << s;
+        complex_double omega_m = { .re = cos(-2. * M_PI / m), .im = sin(-2. * M_PI / m) };
 
-        for(int k = 0; k <= (N - 1) / m; k++)
+        for(int k = 0; k <= (N - 1); k += m)
         {
             complex_double omega = { .re = 1., .im = 0. };
 
