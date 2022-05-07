@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     }
 
     fclose(fp);
-    if (current_line)
-        free(current_line);
+    //if (current_line)
+      //  free(current_line);
 
     f_vals = malloc(sizeof(complex_double) * n_lines);
 

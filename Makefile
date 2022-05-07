@@ -20,13 +20,8 @@ C_FLAGS := \
 
 all:
 	mkdir -p $(DATA_DIR)
-	$(PYTHON) $(SCRIPTS_DIR)/datagen.py
 	$(C_COMPILER) $(SRCS) $(C_FLAGS) -I$(INCLUDE_DIR) -o $(PROGRAM_NAME)
 	./$(PROGRAM_NAME) data/generated_data.csv
-	$(PYTHON) $(SCRIPTS_DIR)/plotter.py &
 
-demo:
-	$(PYTHON) $(SCRIPTS_DIR)/demo.py &
-	
 clean:
 	rm -r fft_program data

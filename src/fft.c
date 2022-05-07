@@ -1,6 +1,7 @@
 #include "fft.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 // Discrette Fourier Transform naive implementation (from definition)
 void dft_naive(complex_double *in, complex_double *out, size_t N)
@@ -39,15 +40,64 @@ void fft_radix2(complex_double *in, complex_double *out, size_t N, size_t s)
     }
 }
 
+// Implementacja z: https://www.geeksforgeeks.org/write-an-efficient-c-program-to-reverse-bits-of-a-number/: 
+static int rev(unsigned int num, size_t N)
+{
+    unsigned int NO_OF_BITS = log2(N);
+    unsigned int reverse_num = 0;
+    int i;
+    for (i = 0; i < NO_OF_BITS; i++) {
+        if ((num & (1 << i)))
+            reverse_num |= 1 << ((NO_OF_BITS - 1) - i);
+    }
+    return reverse_num;
+}
+
+
+static void bit_reversal_copy(complex_double* result, complex_double* input, size_t N)
+{
+    for(unsigned int k = 0; k < N - 1; k++)
+    {
+        result[rev(k, N)] = input[k];
+    }
+}
+
+
+void fft_radix2_iter(complex_double *in, complex_double *out, size_t N, size_t stride)
+{
+    bit_reversal_copy(out, in, N);
+
+    for(int s = 1; s <= log2(N); s++)
+    {
+        int m = pow(2, s);
+        complex_double omega_m = { .re = cos(2 * 3.141592 / m), .im = sin(-2 * 3.141592 / m) };
+
+        for(int k = 0; k <= (N - 1) / m; k++)
+        {
+            complex_double omega = { .re = 1., .im = 0. };
+
+            for(int j = 0; j <= m / 2 - 1; j++)
+            {
+                complex_double t = mul(omega, out[k + j + m / 2]);
+                complex_double u = out[k + j];
+                out[k + j] = add(u, t);
+                out[k + j + m / 2] = sub(u, t);
+                omega = mul(omega, omega_m);
+            }
+        }
+    }
+}
+
 void dft_forward(complex_double *data, size_t N)
 {
     complex_double *out = calloc(sizeof(complex_double), N);
 
     // dft_naive(data, out, N);
-    fft_radix2(data, out, N, 1);
+    fft_radix2_iter(data, out, N, 1);
 
     for (int i=0; i<N; i++)
     {
+        printf("%lf + %lf * i \n", data[i].re, data[i].im);
         data[i] = out[i];
     }
 

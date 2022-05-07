@@ -1,13 +1,14 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-DATA_DIR = "data/"
-FILENAME = "rev_fft_data.csv"
+DATA_DIR = "../data/"
+FILENAME = "fft_data.csv"
 
 file = open(DATA_DIR + FILENAME, "r")
 X, Y_re, Y_im = [], [], []
 for line in file.readlines():
     data_point = [float(x) for x in line.split(sep=",")]
+    print(data_point)
     X.append(data_point[0])
     Y_re.append(data_point[1])
     Y_im.append(data_point[2])
