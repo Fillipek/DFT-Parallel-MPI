@@ -5,7 +5,7 @@ INCLUDE_DIR:=include
 SCRIPTS_DIR:=scripts
 DATA_DIR:=data
 
-C_COMPILER:=gcc
+C_COMPILER:=mpicc
 PYTHON:=python3
 
 SRCS = \
