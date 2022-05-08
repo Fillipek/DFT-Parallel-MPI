@@ -21,7 +21,7 @@ C_FLAGS := \
 all:
 	mkdir -p $(DATA_DIR)
 	$(C_COMPILER) $(SRCS) $(C_FLAGS) -I$(INCLUDE_DIR) -o $(PROGRAM_NAME)
-	./$(PROGRAM_NAME) data/generated_data.csv
+	mpiexec -f nodes -n 4 ./$(PROGRAM_NAME) data/generated_data.csv
 
 clean:
 	rm -r fft_program data

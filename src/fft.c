@@ -59,7 +59,7 @@ static void bit_reversal_copy(complex_double* result, complex_double* input, siz
 {
     for(unsigned int k = 0; k < N; k++)
     {
-        printf("%d %d\n", k, rev(k, N));
+        //printf("%d %d\n", k, rev(k, N));
         result[rev(k, N)] = input[k];
     }
 }
@@ -71,19 +71,20 @@ void fft_radix2_iter(complex_double *in, complex_double *out, size_t N, size_t s
 
     for(int s = 1; s <= log2(N); s++)
     {
-        int m = 1 << s;
+        int m = pow(2, s);
         complex_double omega_m = { .re = cos(-2. * M_PI / m), .im = sin(-2. * M_PI / m) };
 
         // parallel start
-        for(int k = myid; k <= (N - 1); k += m * numprocs)
+        for(int k = 0; k <= (N - 1); k += m)
         {
             complex_double omega = { .re = 1., .im = 0. };
 
-            for(int j = 0; j <= m / 2 - 1; j++)
+            for(int j = 0; j <= (m / 2 - 1); j++)
             {
                 complex_double t = mul(omega, out[k + j + m / 2]);
                 complex_double u = out[k + j];
                 out[k + j] = add(u, t);
+                //printf("%d %d %d \n", k, j, m/2);
                 out[k + j + m / 2] = sub(u, t);
                 omega = mul(omega, omega_m);
             }
@@ -93,18 +94,16 @@ void fft_radix2_iter(complex_double *in, complex_double *out, size_t N, size_t s
 
 void dft_forward(complex_double *data, size_t N, int myid, int numprocs)
 {
-    complex_double *out = calloc(sizeof(complex_double), N);
-
-    // dft_naive(data, out, N);
+    complex_double out[128];
     fft_radix2_iter(data, out, N, 1, myid, numprocs);
+    //fft_radix2(data, out, N, 1);
 
     for (int i=0; i<N; i++)
     {
-        printf("%lf + %lf * i \n", data[i].re, data[i].im);
         data[i] = out[i];
     }
 
-    free(out);
+    //free(out);
 }
 
 
