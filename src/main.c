@@ -2,9 +2,18 @@
 #include <stdlib.h>
 #include "fft.h"
 #include <complex.h>
+#include "mpi.h"
+
+#define PROC_MASTER 1
 
 int main(int argc, char *argv[])
 {
+    MPI_Init(&argc, &argv);
+
+    int myid = 0, numprocs = 1;
+    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
     // inicjalizacja parametrów i zmiennych
     double complex *f_vals;        // array of function values
 
@@ -93,4 +102,6 @@ int main(int argc, char *argv[])
 
     // szprzątanie
     free(f_vals);
+
+    MPI_Finalize();
 }

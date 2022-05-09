@@ -5,12 +5,11 @@ INCLUDE_DIR:=include
 SCRIPTS_DIR:=scripts
 DATA_DIR:=data
 
-C_COMPILER:=gcc
+C_COMPILER:=mpicc
 PYTHON:=python3
 
 SRCS = \
   $(SRC_DIR)/main.c \
-  $(SRC_DIR)/complex_own.c \
   $(SRC_DIR)/fft.c 
 
 C_FLAGS := \
