@@ -69,7 +69,7 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
         int m = 1 << s;
         double complex omega_m = cexp(-2. * M_PI / m * I);
 
-        for(int k = 0; k < N; k += m)
+        for(int k = mpi_data.proc_rank; k < N; k += m * mpi_data.n_proc)
         {
             double complex omega = 1;
 
@@ -78,9 +78,11 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
                 double complex t = omega * out[k + j + m / 2];
                 double complex u = out[k + j];
                 out[k + j] = u + t;
-                out[k + j + m / 2] = u - t;
+                out[k + j + m/2] = u - t;
                 omega *= omega_m;
             }
+            MPI_Bcast(out+k, m/2, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
+            MPI_Bcast(out+k+m/2, m/2, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
         }
     }
 }
