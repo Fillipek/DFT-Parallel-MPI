@@ -3,21 +3,18 @@
 #include <stdlib.h>
 
 // Discrette Fourier Transform naive implementation (from definition)
-void dft_naive(complex_double *in, complex_double *out, size_t N)
+void dft_naive(double complex *in, double complex *out, size_t N)
 {
     for (int k = 0; k < N; k++) {
         for (int n = 0; n < N; n++) {
-            complex_double temp = {
-                .re = cos(-2 * M_PI / N * k * n),
-                .im = sin(-2 * M_PI / N * k * n)
-            };
-            out[k] = add(out[k], mul(in[n], temp));
+            double complex temp = cos(-2 * M_PI / N * k * n) + I*sin(-2 * M_PI / N * k * n);
+            out[k] = out[k] + in[n] * temp;
         }
     }
 }
 
 // Fast Fourier Transform using recursive Cooley-Tukey algorithm (Radix-2)
-void fft_radix2(complex_double *in, complex_double *out, size_t N, size_t s)
+void fft_radix2(double complex *in, double complex *out, size_t N, size_t s)
 {
     if (N == 1)
     {
@@ -28,20 +25,17 @@ void fft_radix2(complex_double *in, complex_double *out, size_t N, size_t s)
     fft_radix2(in+s, out+N/2, N/2, 2*s);
     for (int k = 0; k<N/2; k++)
     {
-        complex_double p = out[k];
-        complex_double t = {
-            .re = cos(-2 * M_PI * k / N),
-            .im = sin(-2 * M_PI * k / N)
-        };
-        complex_double q = mul(t, out[k + N/2]);
-        out[k] = add(p, q);
-        out[k+N/2] = sub(p, q);
+        double complex p = out[k];
+        double complex t = cos(-2 * M_PI * k / N) + I*sin(-2 * M_PI * k / N);
+        double complex q = t * out[k + N/2];
+        out[k] = p + q;
+        out[k+N/2] = p - q;
     }
 }
 
-void dft_forward(complex_double *data, size_t N)
+void dft_forward(double complex *data, size_t N)
 {
-    complex_double *out = calloc(sizeof(complex_double), N);
+    double complex *out = calloc(sizeof(double complex), N);
 
     // dft_naive(data, out, N);
     fft_radix2(data, out, N, 1);
@@ -55,16 +49,15 @@ void dft_forward(complex_double *data, size_t N)
 }
 
 
-void dft_backward(complex_double *data, size_t N)
+void dft_backward(double complex *data, size_t N)
 {
-    for (complex_double *p=data; p!=data+N; p++)
+    for (double complex *p=data; p!=data+N; p++)
     {
-        p->im *= -1;
+        *p = conj(*p);
     }
     dft_forward(data, N);
-    for (complex_double *p=data; p!=data+N; p++)
+    for (double complex *p=data; p!=data+N; p++)
     {
-        p->im *= -1;
-        *p = mul_by_factor(*p, 1./N);
+        *p = conj(*p) / (double)N;
     }
 }
