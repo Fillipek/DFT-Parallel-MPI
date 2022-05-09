@@ -2,28 +2,29 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "mpi.h"
 
 // Discrette Fourier Transform naive implementation (from definition)
-void dft_naive(double complex *in, double complex *out, size_t N)
+void dft_naive(double complex *in, double complex *out, size_t N, MPI_Data mpi_data)
 {
-    for (int k = 0; k < N; k++) {
+    for (int k = mpi_data.proc_rank; k < N; k += mpi_data.n_proc) {
         for (int n = 0; n < N; n++) {
-            double complex temp =  cexp(-2 * M_PI / N * k * n * I);
-            out[k] = out[k] + in[n] * temp;
+            out[k] += in[n] * cexp(-2 * M_PI / N * k * n * I);
         }
+        MPI_Bcast(out+k, 1, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
     }
 }
 
 // Fast Fourier Transform using recursive Cooley-Tukey algorithm (Radix-2)
-void fft_radix2(double complex *in, double complex *out, size_t N, size_t s)
+void fft_radix2(double complex *in, double complex *out, size_t N, size_t s, MPI_Data mpi_data)
 {
     if (N == 1)
     {
         *out = *in;
         return;
     }
-    fft_radix2(in, out, N/2, 2*s);
-    fft_radix2(in+s, out+N/2, N/2, 2*s);
+    fft_radix2(in, out, N/2, 2*s, mpi_data);
+    fft_radix2(in+s, out+N/2, N/2, 2*s, mpi_data);
     for (int k = 0; k<N/2; k++)
     {
         double complex p = out[k];
@@ -35,7 +36,7 @@ void fft_radix2(double complex *in, double complex *out, size_t N, size_t s)
 }
 
 // Implementacja z: https://www.geeksforgeeks.org/write-an-efficient-c-program-to-reverse-bits-of-a-number/: 
-static int rev(unsigned int num, size_t N)
+static int rev(unsigned int num, size_t N, MPI_Data mpi_data)
 {
     int Nbits = (int)log2(N);
 
@@ -49,19 +50,19 @@ static int rev(unsigned int num, size_t N)
     return x_rev;
 }
 
-static void bit_reversal_copy(double complex* result, double complex* input, size_t N)
+static void bit_reversal_copy(double complex* result, double complex* input, size_t N, MPI_Data mpi_data)
 {
     for(unsigned int k = 0; k < N; k++)
     {
-        printf("%d %d\n", k, rev(k, N));
-        result[rev(k, N)] = input[k];
+        printf("%d %d\n", k, rev(k, N, mpi_data));
+        result[rev(k, N, mpi_data)] = input[k];
     }
 }
 
 
-void fft_radix2_iter(double complex *in, double complex *out, size_t N, size_t stride)
+void fft_radix2_iter(double complex *in, double complex *out, size_t N, size_t stride, MPI_Data mpi_data)
 {
-    bit_reversal_copy(out, in, N);
+    bit_reversal_copy(out, in, N, mpi_data);
 
     for(int s = 1; s <= log2(N); s++)
     {
@@ -84,12 +85,12 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, size_t s
     }
 }
 
-void dft_forward(double complex *data, size_t N)
+void dft_forward(double complex *data, size_t N, MPI_Data mpi_data)
 {
     double complex *out = calloc(sizeof(double complex), N);
 
-    // dft_naive(data, out, N);
-    fft_radix2_iter(data, out, N, 1);
+    dft_naive(data, out, N, mpi_data);
+    // fft_radix2_iter(data, out, N, 1, mpi_data);
 
     for (int i=0; i<N; i++)
     {
@@ -101,13 +102,13 @@ void dft_forward(double complex *data, size_t N)
 }
 
 
-void dft_backward(double complex *data, size_t N)
+void dft_backward(double complex *data, size_t N, MPI_Data mpi_data)
 {
     for (double complex *p=data; p!=data+N; p++)
     {
         *p = conj(*p);
     }
-    dft_forward(data, N);
+    dft_forward(data, N, mpi_data);
     for (double complex *p=data; p!=data+N; p++)
     {
         *p = conj(*p) / (double)N;

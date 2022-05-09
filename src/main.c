@@ -3,16 +3,16 @@
 #include "fft.h"
 #include <complex.h>
 #include "mpi.h"
-
-#define PROC_MASTER 0
+#include "mpi_data.h"
 
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
 
-    int myid = 0, numprocs = 1;
-    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Data mpi_data = { .comm = MPI_COMM_WORLD };
+
+    MPI_Comm_size(MPI_COMM_WORLD, &(mpi_data.n_proc));
+    MPI_Comm_rank(MPI_COMM_WORLD, &(mpi_data.proc_rank));
 
     // inicjalizacja parametrów i zmiennych
     double complex *f_vals;        // array of function values
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     char *current_line = NULL;
     size_t line_len;
 
-    if (myid == PROC_MASTER)
+    if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
         // wczytanie danych wejściowych
         if (argc <= 1)
@@ -42,10 +42,10 @@ int main(int argc, char *argv[])
             free(current_line);
     }
 
-    MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG, PROC_MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
     f_vals = malloc(sizeof(double complex) * N);
 
-    if (myid == PROC_MASTER)
+    if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
         fp = fopen(argv[1], "r");
         complex double *f_curr = f_vals;
@@ -59,17 +59,17 @@ int main(int argc, char *argv[])
             free(current_line);
     }
 
-    MPI_Bcast(f_vals, N, MPI_C_DOUBLE_COMPLEX, PROC_MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(f_vals, N, MPI_C_DOUBLE_COMPLEX, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
 
 
     // wypisanie funckji
     // funkcja licząca FFT
 
-    dft_forward(f_vals, N);
+    dft_forward(f_vals, N, mpi_data);
 
 
     // zachowanie wyników FFT
-    if (myid == PROC_MASTER)
+    if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
         FILE *fp = fopen("data/fft_data.csv", "w");
         for (int i =0; i<N; i++)
@@ -101,10 +101,10 @@ int main(int argc, char *argv[])
     // }
 
     // policzneie FFT-1
-    dft_backward(f_vals, N);
+    dft_backward(f_vals, N, mpi_data);
 
     // zachowanie wyników FFT-1
-    if (myid == PROC_MASTER)
+    if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
         FILE *fp = fopen("data/rev_fft_data.csv", "w");
         for (int i =0; i<N; i++)
