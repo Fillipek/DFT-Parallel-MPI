@@ -14,6 +14,11 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &(mpi_data.n_proc));
     MPI_Comm_rank(MPI_COMM_WORLD, &(mpi_data.proc_rank));
 
+    if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
+    {
+        printf("[Info] Starting with number of processes: %d\n", mpi_data.n_proc);
+    }
+
     // inicjalizacja parametrów i zmiennych
     double complex *f_vals;        // array of function values
     FILE *fp;
@@ -61,6 +66,13 @@ int main(int argc, char *argv[])
 
     MPI_Bcast(f_vals, N, MPI_C_DOUBLE_COMPLEX, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
 
+    // if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
+    // {
+    //     for (int i=0; i<N; i++)
+    //     {
+    //         printf("[Debug] y[%d] = %lf\n", i, creal(f_vals[i]));
+    //     }
+    // }
 
     // wypisanie funckji
     // funkcja licząca FFT
