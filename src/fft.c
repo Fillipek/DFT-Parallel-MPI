@@ -7,7 +7,7 @@ void dft_naive(double complex *in, double complex *out, size_t N)
 {
     for (int k = 0; k < N; k++) {
         for (int n = 0; n < N; n++) {
-            double complex temp = cos(-2 * M_PI / N * k * n) + I*sin(-2 * M_PI / N * k * n);
+            double complex temp =  cexp(-2 * M_PI / N * k * n * I);
             out[k] = out[k] + in[n] * temp;
         }
     }
@@ -26,7 +26,7 @@ void fft_radix2(double complex *in, double complex *out, size_t N, size_t s)
     for (int k = 0; k<N/2; k++)
     {
         double complex p = out[k];
-        double complex t = cos(-2 * M_PI * k / N) + I*sin(-2 * M_PI * k / N);
+        double complex t = cexp(-2 * M_PI * k / N * I);
         double complex q = t * out[k + N/2];
         out[k] = p + q;
         out[k+N/2] = p - q;
