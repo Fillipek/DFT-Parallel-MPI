@@ -36,7 +36,7 @@ void fft_radix2(double complex *in, double complex *out, size_t N, size_t s, MPI
 }
 
 // Implementacja z: https://www.geeksforgeeks.org/write-an-efficient-c-program-to-reverse-bits-of-a-number/: 
-static int rev(unsigned int num, size_t N, MPI_Data mpi_data)
+static int rev(unsigned int num, size_t N)
 {
     int Nbits = (int)log2(N);
 
@@ -52,15 +52,15 @@ static int rev(unsigned int num, size_t N, MPI_Data mpi_data)
 
 static void bit_reversal_copy(double complex* result, double complex* input, size_t N, MPI_Data mpi_data)
 {
-    for(unsigned int k = 0; k < N; k++)
+    for(unsigned int k = mpi_data.proc_rank; k < N; k+=mpi_data.n_proc)
     {
-        printf("%d %d\n", k, rev(k, N, mpi_data));
-        result[rev(k, N, mpi_data)] = input[k];
+        result[rev(k, N)] = input[k];
+        MPI_Bcast(result+k, 1, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
     }
 }
 
 
-void fft_radix2_iter(double complex *in, double complex *out, size_t N, size_t stride, MPI_Data mpi_data)
+void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data mpi_data)
 {
     bit_reversal_copy(out, in, N, mpi_data);
 
@@ -69,17 +69,17 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, size_t s
         int m = 1 << s;
         double complex omega_m = cexp(-2. * M_PI / m * I);
 
-        for(int k = 0; k <= (N - 1); k += m)
+        for(int k = 0; k < N; k += m)
         {
             double complex omega = 1;
 
-            for(int j = 0; j <= m / 2 - 1; j++)
+            for(int j = 0; j < m/2; j++)
             {
                 double complex t = omega * out[k + j + m / 2];
                 double complex u = out[k + j];
                 out[k + j] = u + t;
                 out[k + j + m / 2] = u - t;
-                omega = omega * omega_m;
+                omega *= omega_m;
             }
         }
     }
@@ -89,8 +89,8 @@ void dft_forward(double complex *data, size_t N, MPI_Data mpi_data)
 {
     double complex *out = calloc(sizeof(double complex), N);
 
-    dft_naive(data, out, N, mpi_data);
-    // fft_radix2_iter(data, out, N, 1, mpi_data);
+    // dft_naive(data, out, N, mpi_data);
+    fft_radix2_iter(data, out, N, mpi_data);
 
     for (int i=0; i<N; i++)
     {
