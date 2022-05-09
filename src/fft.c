@@ -16,14 +16,6 @@ void dft_naive(double complex *in, double complex *out, size_t N, MPI_Data mpi_d
         recv_counts[proc_rank] = idx_per_proc;
         displacements[proc_rank] = idx_per_proc * proc_rank;
     }
-
-    if(mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
-    {
-        for (int i=0; i< mpi_data.n_proc; i++)
-        {
-            printf("[%d] %d\n", i, recv_counts[i]);
-        }
-    }
     
     double complex *tmp = calloc(sizeof(double complex), idx_per_proc);
     for (int k = 0; k < idx_per_proc; k++) {
@@ -35,19 +27,6 @@ void dft_naive(double complex *in, double complex *out, size_t N, MPI_Data mpi_d
     }
     MPI_Allgatherv(tmp, idx_per_proc, MPI_C_DOUBLE_COMPLEX, out, recv_counts, displacements, MPI_C_DOUBLE_COMPLEX, mpi_data.comm);
     free(tmp);
-
-
-    // MPI_Barrier(mpi_data.comm);
-    // MPI_Bcast(out+k, 1, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
-
-    // if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
-    // {
-    //     for(int k=0; k<N; k++)
-    //     // for (int k = mpi_data.proc_rank; k < N; k += mpi_data.n_proc)
-    //     {
-    //         printf("[Debug] fft[%d] = %lf + i%lf\n", k, fabs(creal(out[k])), fabs(cimag(out[k])));
-    //     }
-    // }
 }
 
 // Fast Fourier Transform using recursive Cooley-Tukey algorithm (Radix-2)
