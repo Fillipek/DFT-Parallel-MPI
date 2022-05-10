@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
     /* Variable declarations */
     MPI_Data mpi_data = { .comm = MPI_COMM_WORLD };
-    double complex *f_vals;
+    double complex *data;
     size_t N = 0;
 
     MPI_Init(&argc, &argv);
@@ -36,33 +36,33 @@ int main(int argc, char *argv[])
     }
 
     MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
-    f_vals = malloc(sizeof(double complex) * N);
+    data = malloc(sizeof(double complex) * N);
 
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        read_data_lines(argv[1], N, f_vals);
+        read_data_lines(argv[1], N, data);
     }
-    MPI_Bcast(f_vals, N, MPI_C_DOUBLE_COMPLEX, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(data, N, MPI_C_DOUBLE_COMPLEX, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
 
-    dft_forward(f_vals, N, mpi_data);
+    fft_forward(data, N, mpi_data);
 
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        save_to_file("data/fft_data.csv", N, f_vals);
+        save_to_file("data/fft_data.csv", N, data);
     }
 
     #ifdef FFT_FLTER_THRESHOLD
-        fft_filter(FFT_FLTER_THRESHOLD, f_vals, N, mpi_data);
+        fft_filter(FFT_FLTER_THRESHOLD, data, N, mpi_data);
     #endif
 
-    dft_backward(f_vals, N, mpi_data);
+    fft_backward(data, N, mpi_data);
 
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        save_to_file("data/rev_fft_data.csv", N, f_vals);
+        save_to_file("data/rev_fft_data.csv", N, data);
     }
 
     /* Cleanup */
-    free(f_vals);
+    free(data);
     MPI_Finalize();
 }

@@ -4,7 +4,65 @@
 #include <stdio.h>
 #include "mpi.h"
 
-// Discrette Fourier Transform naive implementation (from definition)
+void dft_naive(double complex *in, double complex *out, size_t N, MPI_Data mpi_data);
+void fft_radix2(double complex *in, double complex *out, size_t N, size_t s, MPI_Data mpi_data);
+static int rev(unsigned int num, size_t N);
+static void bit_reversal_copy(double complex* result, double complex* input, size_t N, MPI_Data mpi_data);
+void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data mpi_data);
+
+void fft_forward(double complex *data, size_t N, MPI_Data mpi_data)
+{
+    double complex *out = calloc(sizeof(double complex), N);
+
+    // dft_naive(data, out, N, mpi_data);
+    fft_radix2_iter(data, out, N, mpi_data);
+
+    for (int i=0; i<N; i++)
+    {
+        data[i] = out[i];
+    }
+
+    free(out);
+}
+
+
+void fft_backward(double complex *data, size_t N, MPI_Data mpi_data)
+{
+    for (double complex *p=data; p!=data+N; p++)
+    {
+        *p = conj(*p);
+    }
+    fft_forward(data, N, mpi_data);
+    for (double complex *p=data; p!=data+N; p++)
+    {
+        *p = conj(*p) / (double)N;
+    }
+}
+
+void fft_filter(double threshold, double complex *data, size_t N, MPI_Data mpi_data)
+{
+    double module_max_sq = 0, module_curr_sq;
+    for (double complex *p=data; p!=data+N; p++)
+    {
+        module_curr_sq = cabs(*p);
+        if (module_curr_sq > module_max_sq)
+        {
+            module_max_sq = module_curr_sq;
+        }
+    }
+    double th = threshold * module_max_sq;
+    for (double complex *p=data; p!=data+N; p++)
+    {
+        module_curr_sq = cabs(*p);
+        if (module_curr_sq < th)
+        {
+            *p = 0;
+        }
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+
 void dft_naive(double complex *in, double complex *out, size_t N, MPI_Data mpi_data)
 {
     const int idx_per_proc = N / mpi_data.n_proc;
@@ -29,7 +87,6 @@ void dft_naive(double complex *in, double complex *out, size_t N, MPI_Data mpi_d
     free(tmp);
 }
 
-// Fast Fourier Transform using recursive Cooley-Tukey algorithm (Radix-2)
 void fft_radix2(double complex *in, double complex *out, size_t N, size_t s, MPI_Data mpi_data)
 {
     if (N == 1)
@@ -103,7 +160,6 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
             }
             for(int k = 0; k < idx_per_proc; k += m)
             {
-                int global_k = k + mpi_data.proc_rank * idx_per_proc;
                 double complex omega = 1;
 
                 for(int j = 0; j < m/2; j++)
@@ -137,56 +193,4 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
     }
 
     free(tmp);
-}
-
-void dft_forward(double complex *data, size_t N, MPI_Data mpi_data)
-{
-    double complex *out = calloc(sizeof(double complex), N);
-
-    // dft_naive(data, out, N, mpi_data);
-    fft_radix2_iter(data, out, N, mpi_data);
-
-    for (int i=0; i<N; i++)
-    {
-        // printf("%lf + %lf * i \n", creal(data[i]), cimag(data[i]));
-        data[i] = out[i];
-    }
-
-    free(out);
-}
-
-
-void dft_backward(double complex *data, size_t N, MPI_Data mpi_data)
-{
-    for (double complex *p=data; p!=data+N; p++)
-    {
-        *p = conj(*p);
-    }
-    dft_forward(data, N, mpi_data);
-    for (double complex *p=data; p!=data+N; p++)
-    {
-        *p = conj(*p) / (double)N;
-    }
-}
-
-void fft_filter(double threshold, double complex *data, size_t N, MPI_Data mpi_data)
-{
-    double module_max_sq = 0, module_curr_sq;
-    for (double complex *p=data; p!=data+N; p++)
-    {
-        module_curr_sq = cabs(*p);
-        if (module_curr_sq > module_max_sq)
-        {
-            module_max_sq = module_curr_sq;
-        }
-    }
-    double th = threshold * module_max_sq;
-    for (double complex *p=data; p!=data+N; p++)
-    {
-        module_curr_sq = cabs(*p);
-        if (module_curr_sq < th)
-        {
-            *p = 0;
-        }
-    }
 }
