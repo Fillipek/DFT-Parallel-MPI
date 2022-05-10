@@ -6,8 +6,6 @@
 #include "mpi_data.h"
 #include "file_utils.h"
 
-#define FFT_FLTER_THRESHOLD 0.2
-
 int main(int argc, char *argv[])
 {
     /* Variable declarations */
