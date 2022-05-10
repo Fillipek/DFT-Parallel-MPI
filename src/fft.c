@@ -14,8 +14,8 @@ void fft_forward(double complex *data, size_t N, MPI_Data mpi_data)
 {
     double complex *out = calloc(sizeof(double complex), N);
 
-    dft_naive(data, out, N, mpi_data);
-    // fft_radix2_iter(data, out, N, mpi_data);
+    // dft_naive(data, out, N, mpi_data);
+    fft_radix2_iter(data, out, N, mpi_data);
 
     for (int i=0; i<N; i++)
     {
@@ -150,7 +150,7 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
         int m = 1 << s;
         double complex omega_m = cexp(-2. * M_PI / m * I);
 
-        if (s < log2(N) - log2(mpi_data.n_proc))
+        if (s <= log2(N) - log2(mpi_data.n_proc))
         {
             // Parallel
             for (int k=0; k < idx_per_proc; k++)
@@ -173,7 +173,7 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
             }
             MPI_Allgatherv(tmp, idx_per_proc, MPI_C_DOUBLE_COMPLEX, out, recv_counts, displacements, MPI_C_DOUBLE_COMPLEX, mpi_data.comm);
         }
-        else if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
+        else //if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
         {
             // Sequential
             for(int k = 0; k < N; k += m)
