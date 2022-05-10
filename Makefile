@@ -10,7 +10,8 @@ PYTHON:=python3
 
 SRCS = \
   $(SRC_DIR)/main.c \
-  $(SRC_DIR)/fft.c 
+  $(SRC_DIR)/fft.c \
+  $(SRC_DIR)/file_utils.c \
 
 C_FLAGS := \
   -lm \

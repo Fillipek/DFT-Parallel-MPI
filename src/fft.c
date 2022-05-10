@@ -168,3 +168,25 @@ void dft_backward(double complex *data, size_t N, MPI_Data mpi_data)
         *p = conj(*p) / (double)N;
     }
 }
+
+void fft_filter(double threshold, double complex *data, size_t N, MPI_Data mpi_data)
+{
+    double module_max_sq = 0, module_curr_sq;
+    for (double complex *p=data; p!=data+N; p++)
+    {
+        module_curr_sq = cabs(*p);
+        if (module_curr_sq > module_max_sq)
+        {
+            module_max_sq = module_curr_sq;
+        }
+    }
+    double th = threshold * module_max_sq;
+    for (double complex *p=data; p!=data+N; p++)
+    {
+        module_curr_sq = cabs(*p);
+        if (module_curr_sq < th)
+        {
+            *p = 0;
+        }
+    }
+}

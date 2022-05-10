@@ -4,13 +4,18 @@
 #include <complex.h>
 #include "mpi.h"
 #include "mpi_data.h"
+#include "file_utils.h"
+
+#define FFT_FLTER_THRESHOLD 0.2
 
 int main(int argc, char *argv[])
 {
-    MPI_Init(&argc, &argv);
-
+    /* Variable declarations */
     MPI_Data mpi_data = { .comm = MPI_COMM_WORLD };
+    double complex *f_vals;
+    size_t N = 0;
 
+    MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &(mpi_data.n_proc));
     MPI_Comm_rank(MPI_COMM_WORLD, &(mpi_data.proc_rank));
 
@@ -19,32 +24,15 @@ int main(int argc, char *argv[])
         printf("[Info] Starting with number of processes: %d\n", mpi_data.n_proc);
     }
 
-    // inicjalizacja parametrów i zmiennych
-    double complex *f_vals;        // array of function values
-    FILE *fp;
-    size_t N = 0;
-    size_t len = 0;
-    char *current_line = NULL;
-    size_t line_len;
-
+    /* Data readout from file */
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        // wczytanie danych wejściowych
         if (argc <= 1)
         {
             fprintf(stderr, "ERROR: The program requires an argument which is a path to data file.\n");
-            exit(EXIT_FAILURE);
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-
-        fp = fopen(argv[1], "r");
-        while ((line_len = getline(&current_line, &len, fp)) != -1)
-        {
-            N++;
-        }
-
-        fclose(fp);
-        if (current_line)
-            free(current_line);
+        count_lines_in_file(argv[1], &N);
     }
 
     MPI_Bcast(&N, 1, MPI_UNSIGNED_LONG, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
@@ -52,82 +40,29 @@ int main(int argc, char *argv[])
 
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        fp = fopen(argv[1], "r");
-        complex double *f_curr = f_vals;
-        while ((line_len = getline(&current_line, &len, fp)) != -1)
-        {
-            *f_curr = (double)atof(current_line);
-            f_curr++;
-        }
-        fclose(fp);
-        if (current_line)
-            free(current_line);
+        read_data_lines(argv[1], N, f_vals);
     }
-
     MPI_Bcast(f_vals, N, MPI_C_DOUBLE_COMPLEX, MPI_PROC_RANK_MASTER, MPI_COMM_WORLD);
-
-    // if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
-    // {
-    //     for (int i=0; i<N; i++)
-    //     {
-    //         printf("[Debug] y[%d] = %lf\n", i, creal(f_vals[i]));
-    //     }
-    // }
-
-    // wypisanie funckji
-    // funkcja licząca FFT
 
     dft_forward(f_vals, N, mpi_data);
 
-
-    // zachowanie wyników FFT
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        FILE *fp = fopen("data/fft_data.csv", "w");
-        for (int i =0; i<N; i++)
-        {
-            fprintf(fp, "%d, %.4lf, %.4lf\n", i, creal(f_vals[i]), cimag(f_vals[i]));
-        }
-        fclose(fp);
+        save_to_file("data/fft_data.csv", N, f_vals);
     }
 
-    // filtracja sygnału (odcięcie wartości których moduł < 50% max moduł)
-    // liczymy kwadraty, czyli granica to 25% max
-    // double module_max_sq = 0, module_curr_sq;
-    // for (double complex *p=f_vals; p!=f_vals+N; p++)
-    // {
-    //     module_curr_sq = p->re * p->re + p->im * p->im;
-    //     if (module_curr_sq > module_max_sq)
-    //     {
-    //         module_max_sq = module_curr_sq;
-    //     }
-    // }
-    // double threshold = 0.25 * module_max_sq;
-    // for (double complex *p=f_vals; p!=f_vals+N; p++)
-    // {
-    //     module_curr_sq = p->re * p->re + p->im * p->im;
-    //     if (module_curr_sq < threshold)
-    //     {
-    //         *p = 0;
-    //     }
-    // }
+    #ifdef FFT_FLTER_THRESHOLD
+        fft_filter(FFT_FLTER_THRESHOLD, f_vals, N, mpi_data);
+    #endif
 
-    // policzneie FFT-1
     dft_backward(f_vals, N, mpi_data);
 
-    // zachowanie wyników FFT-1
     if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
     {
-        FILE *fp = fopen("data/rev_fft_data.csv", "w");
-        for (int i =0; i<N; i++)
-        {
-            fprintf(fp, "%d, %.4lf, %.4lf\n", i, creal(f_vals[i]), cimag(f_vals[i]));
-        }
-        fclose(fp);
+        save_to_file("data/rev_fft_data.csv", N, f_vals);
     }
 
-    // szprzątanie
+    /* Cleanup */
     free(f_vals);
-
     MPI_Finalize();
 }

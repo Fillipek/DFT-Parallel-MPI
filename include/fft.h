@@ -11,4 +11,6 @@ void dft_forward(double complex *data, size_t N, MPI_Data mpi_data);
 // procedura licząca tranformatę odwrtoną Fouriera.
 void dft_backward(double complex *data, size_t N, MPI_Data mpi_data);
 
+void fft_filter(double threshold, double complex *data, size_t N, MPI_Data mpi_data);
+
 #endif
