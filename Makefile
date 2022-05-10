@@ -28,7 +28,7 @@ C_FLAGS := \
 DEFINES := \
   -DFFT_FLTER_THRESHOLD=$(FFT_FLTER_THRESHOLD)
 
-all: clean build data run_parallel
+all: build data run_parallel
 
 build:
 	$(C_COMPILER) $(SRCS) $(C_FLAGS) -I$(INCLUDE_DIR) -o $(PROGRAM_NAME) $(DEFINES)
