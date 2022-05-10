@@ -66,10 +66,9 @@ static int rev(unsigned int num, size_t N)
 
 static void bit_reversal_copy(double complex* result, double complex* input, size_t N, MPI_Data mpi_data)
 {
-    for(unsigned int k = mpi_data.proc_rank; k < N; k+=mpi_data.n_proc)
+    for(unsigned int k = 0; k < N; k++)
     {
         result[rev(k, N)] = input[k];
-        MPI_Bcast(result+k, 1, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
     }
 }
 
@@ -78,36 +77,74 @@ void fft_radix2_iter(double complex *in, double complex *out, size_t N, MPI_Data
 {
     bit_reversal_copy(out, in, N, mpi_data);
 
+    const int idx_per_proc = N / mpi_data.n_proc;
+
+    int *recv_counts = malloc(sizeof(int) * mpi_data.n_proc);
+    int *displacements = malloc(sizeof(int) * mpi_data.n_proc);
+    for (int proc_rank=0; proc_rank< mpi_data.n_proc; proc_rank++)
+    {
+        recv_counts[proc_rank] = idx_per_proc;
+        displacements[proc_rank] = idx_per_proc * proc_rank;
+    }
+    double complex *tmp = malloc(sizeof(double complex) * idx_per_proc);
+
     for(int s = 1; s <= log2(N); s++)
     {
         int m = 1 << s;
         double complex omega_m = cexp(-2. * M_PI / m * I);
 
-        // for(int k = mpi_data.proc_rank; k < N; k += m * mpi_data.n_proc)
-        for(int k = 0; k < N; k += m)
+        if (s < log2(N) - log2(mpi_data.n_proc))
         {
-            double complex omega = 1;
-
-            for(int j = 0; j < m/2; j++)
+            // Parallel
+            for (int k=0; k < idx_per_proc; k++)
             {
-                double complex t = omega * out[k + j + m / 2];
-                double complex u = out[k + j];
-                out[k + j] = u + t;
-                out[k + j + m/2] = u - t;
-                omega *= omega_m;
+                int global_k = k + mpi_data.proc_rank * idx_per_proc;
+                tmp[k] = out[global_k];
             }
-            // MPI_Bcast(out+k, m/2, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
-            // MPI_Bcast(out+k+m/2, m/2, MPI_C_DOUBLE_COMPLEX, mpi_data.proc_rank, mpi_data.comm);
+            for(int k = 0; k < idx_per_proc; k += m)
+            {
+                int global_k = k + mpi_data.proc_rank * idx_per_proc;
+                double complex omega = 1;
+
+                for(int j = 0; j < m/2; j++)
+                {
+                    double complex t = omega * tmp[k + j + m / 2];
+                    double complex u = tmp[k + j];
+                    tmp[k + j] = u + t;
+                    tmp[k + j + m/2] = u - t;
+                    omega *= omega_m;
+                } 
+            }
+            MPI_Allgatherv(tmp, idx_per_proc, MPI_C_DOUBLE_COMPLEX, out, recv_counts, displacements, MPI_C_DOUBLE_COMPLEX, mpi_data.comm);
+        }
+        else if (mpi_data.proc_rank == MPI_PROC_RANK_MASTER)
+        {
+            // Sequential
+            for(int k = 0; k < N; k += m)
+            {
+                double complex omega = 1;
+
+                for(int j = 0; j < m/2; j++)
+                {
+                    double complex t = omega * out[k + j + m / 2];
+                    double complex u = out[k + j];
+                    out[k + j] = u + t;
+                    out[k + j + m/2] = u - t;
+                    omega *= omega_m;
+                } 
+            }
         }
     }
+
+    free(tmp);
 }
 
 void dft_forward(double complex *data, size_t N, MPI_Data mpi_data)
 {
     double complex *out = calloc(sizeof(double complex), N);
 
-    dft_naive(data, out, N, mpi_data);
-    // fft_radix2_iter(data, out, N, mpi_data);
+    // dft_naive(data, out, N, mpi_data);
+    fft_radix2_iter(data, out, N, mpi_data);
 
     for (int i=0; i<N; i++)
     {
