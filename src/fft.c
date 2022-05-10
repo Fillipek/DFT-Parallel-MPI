@@ -14,8 +14,8 @@ void fft_forward(double complex *data, size_t N, MPI_Data mpi_data)
 {
     double complex *out = calloc(sizeof(double complex), N);
 
-    // dft_naive(data, out, N, mpi_data);
-    fft_radix2_iter(data, out, N, mpi_data);
+    dft_naive(data, out, N, mpi_data);
+    // fft_radix2_iter(data, out, N, mpi_data);
 
     for (int i=0; i<N; i++)
     {

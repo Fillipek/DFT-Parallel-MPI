@@ -3,9 +3,9 @@ from random import random
 import numpy as np
 
 
-n = 2**7
-X = np.linspace(0, 10, n)
-Y = np.sin(np.copy(X))
+n = 2**10
+X = np.linspace(0, 12, n)
+Y = np.sin(np.copy(X)) + np.cos(2 * np.copy(X)) + 0.1*np.random.random(n)
 
 data_file = open("data/generated_data.csv", "w")
 

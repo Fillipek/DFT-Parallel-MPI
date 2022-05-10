@@ -1,26 +1,29 @@
 from matplotlib import pyplot as plt
 import numpy as np
+import sys
 
-DATA_DIR = "data/"
-FILENAME = "fft_data.csv"
 
-file = open(DATA_DIR + FILENAME, "r")
-X, Y_re, Y_im = [], [], []
-for line in file.readlines():
-    data_point = [float(x) for x in line.split(sep=",")]
-    X.append(data_point[0])
-    Y_re.append(data_point[1])
-    Y_im.append(data_point[2])
+files_to_plot = sys.argv[1:]
 
-Y_re = np.abs(Y_re)
-Y_im = np.abs(Y_im)
+fig, axs = plt.subplots(1, len(files_to_plot))
+plot_idx = 0;
 
-y_max = np.max(np.concatenate((Y_re, Y_im), axis=0))
-noise_thresh = 0.5 * y_max
+for filename in files_to_plot:
+    file = open(filename, "r")
+    X, Y_re, Y_im = [], [], []
+    for line in file.readlines():
+        data_point = [float(x) for x in line.split(sep=",")]
+        X.append(data_point[0])
+        if (len(data_point) > 1):
+            Y_re.append(data_point[1])
+            Y_im.append(data_point[2])
 
-plt.plot(X,Y_re)
-plt.plot(X,Y_im)
-plt.axhline(noise_thresh, color="r", linewidth=1, linestyle="dashed")
+    axs[plot_idx].set_title(filename)
+    axs[plot_idx].plot(X,Y_re)
+    axs[plot_idx].plot(X,Y_im)
+    
+
+    file.close()
+    plot_idx += 1
+
 plt.show()
-
-file.close()
