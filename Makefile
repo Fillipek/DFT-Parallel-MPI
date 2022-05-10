@@ -35,7 +35,7 @@ build:
 
 data:
 	mkdir -p $(DATA_DIR)
-	$(PYTHON) $(SCRIPTS_DIR)/datagen.py
+	$(PYTHON) $(SCRIPTS_DIR)/datagen.py &
 
 run_serial: build data
 	./$(PROGRAM_NAME) $(DATA_SRC)
