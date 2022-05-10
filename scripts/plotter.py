@@ -14,9 +14,8 @@ for filename in files_to_plot:
     for line in file.readlines():
         data_point = [float(x) for x in line.split(sep=",")]
         X.append(data_point[0])
-        if (len(data_point) > 1):
-            Y_re.append(data_point[1])
-            Y_im.append(data_point[2])
+        Y_re.append(data_point[1])
+        Y_im.append(data_point[2])
 
     axs[plot_idx].set_title(filename)
     axs[plot_idx].plot(X,Y_re)
